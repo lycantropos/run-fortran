@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  run-fortran:
+    build: .
+    image: lycantropos/run-fortran:latest
+    volumes:
+      - .:/run-fortran/
+    extra_hosts:
+      - "dockerhost:$DOCKERHOST"  # for debugging
+    command:
+      - run
+      - -p
+      - /run-fortran/test_project
