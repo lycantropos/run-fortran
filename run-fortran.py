@@ -60,16 +60,19 @@ def run(path: str, sep: str) -> None:
     """
     defined_modules_names_by_modules_paths = dict(
         parse_defined_modules_names_by_modules_paths(path))
-
     used_modules_names_by_modules_paths = dict(
         parse_used_modules_names_by_modules_paths(path))
+
     modules_names_by_modules_paths = dict(
         get_modules_names_by_modules_paths(
             defined_modules_names_by_modules_paths,
             used_modules_names_by_modules_paths))
+
     update_chained_modules_names(modules_names_by_modules_paths)
+
     sorted_modules_names_by_modules_paths = (
         sort_modules_names_by_modules_paths(modules_names_by_modules_paths))
+
     for module_path in sorted_modules_names_by_modules_paths.keys():
         sys.stdout.write(module_path + sep)
 
@@ -183,7 +186,8 @@ def parse_normalized_statements(module_path: str) -> Iterable[str]:
 
 def normalize_statement(statement: str) -> str:
     stripped_statement = statement.strip(' ')
-    statement_without_literals = LITERAL_CONSTANTS_RE.sub('', stripped_statement)
+    statement_without_literals = LITERAL_CONSTANTS_RE.sub('',
+                                                          stripped_statement)
     try:
         statement_without_literals_and_comments, comment = (
             statement_without_literals.split('!', maxsplit=1))
