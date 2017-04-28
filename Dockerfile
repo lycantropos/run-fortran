@@ -4,4 +4,4 @@ WORKDIR /run-fortran
 COPY . /run-fortran/
 RUN python3 -m pip install .
 
-ENTRYPOINT ["run-fortran.py"]
+ENTRYPOINT ["python3", "run-fortran.py"]

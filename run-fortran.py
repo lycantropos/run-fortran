@@ -127,10 +127,27 @@ def update_chained_modules_names(
         modules_names_by_modules_paths)
 
     def get_module_path_by_module_name(module_name: str) -> str:
-        res, = [module_path
-                for (module_path,
-                     modules_names) in modules_names_by_modules_paths_copy.items()
-                if module_name in modules_names.defined]
+        modules_paths = [
+            module_path
+            for (module_path,
+                 modules_names) in modules_names_by_modules_paths_copy.items()
+            if module_name in modules_names.defined]
+        try:
+            res, = modules_paths
+        except ValueError as err:
+            if modules_paths:
+                modules_paths_str = ', '.join(modules_paths)
+                err_msg = ('Requested module name is unambiguous: '
+                           f'found {len(modules_paths)} appearances '
+                           f'of module named "{module_name}" '
+                           'in modules definitions within '
+                           f'files located at {modules_paths_str}.')
+                raise ValueError(err_msg) from err
+            err_msg = ('Requested module name is not found: '
+                       'no appearance '
+                       f'of module named "{module_name}" '
+                       'in modules definitions.')
+            raise ValueError(err_msg) from err
         return res
 
     for (module_path,
