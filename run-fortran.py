@@ -1,4 +1,4 @@
-#!python3.6
+#!python3
 import copy
 import logging
 import operator
