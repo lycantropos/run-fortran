@@ -20,7 +20,7 @@ from typing import (Callable,
 
 import click
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 logger = logging.getLogger(__name__)
 
