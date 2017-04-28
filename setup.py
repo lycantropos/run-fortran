@@ -5,7 +5,7 @@ setup(name='run-fortran',
       scripts=['run-fortran.py'],
       description='Script for generating list of files paths '
                   'in hierarchical order '
-                  'for correct FORTRAN-files compilation.',
+                  'for correct "Fortran"-files compilation.',
       author='Azat Ibrakov',
       author_email='azatibrakov@gmail.com',
       url='https://github.com/lycantropos/run-fortran',
