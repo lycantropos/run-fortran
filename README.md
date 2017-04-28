@@ -1,3 +1,10 @@
+# Installation
+Install using `pip`
+```bash
+pip install run-fortran
+```
+
+# Running
 Run
 ```bash
 run-fortran.py run --path $PATH_TO_DIRECTORY --sep $SEPARATOR
