@@ -20,6 +20,8 @@ from typing import (Callable,
 
 import click
 
+__version__ = '0.0.0'
+
 logger = logging.getLogger(__name__)
 
 FORTRAN_FILES_EXTENSIONS = {'.f90', '.f95', '.f03', '.f', '.for'}
