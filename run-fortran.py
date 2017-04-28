@@ -57,8 +57,7 @@ def main() -> None:
               help='Separator between resulted modules paths.')
 def run(path: str, sep: str) -> None:
     """
-    Generates ordered by inclusion
-    list of modules paths.
+    Orders modules paths by inclusion.
     """
     defined_modules_names_by_modules_paths = dict(
         parse_defined_modules_names_by_modules_paths(path))
@@ -138,15 +137,19 @@ def update_chained_modules_names(
             if modules_paths:
                 modules_paths_str = ', '.join(modules_paths)
                 err_msg = ('Requested module name is unambiguous: '
-                           f'found {len(modules_paths)} appearances '
-                           f'of module named "{module_name}" '
+                           'found {appearances_count} appearances '
+                           'of module named "{module_name}" '
                            'in modules definitions within '
-                           f'files located at {modules_paths_str}.')
+                           'files located at {modules_paths}.'
+                           .format(appearances_count=len(modules_paths),
+                                   module_name=module_name,
+                                   modules_paths=modules_paths_str))
                 raise ValueError(err_msg) from err
             err_msg = ('Requested module name is not found: '
                        'no appearance '
-                       f'of module named "{module_name}" '
-                       'in modules definitions.')
+                       'of module named "{module_name}" '
+                       'in modules definitions.'
+                       .format(module_name=module_name))
             raise ValueError(err_msg) from err
         return res
 

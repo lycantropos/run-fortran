@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.5
 
 WORKDIR /run-fortran
 COPY . /run-fortran/
