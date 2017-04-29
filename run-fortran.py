@@ -136,7 +136,7 @@ def update_chained_modules_names(
         except ValueError as err:
             if modules_paths:
                 modules_paths_str = ', '.join(modules_paths)
-                err_msg = ('Requested module name is unambiguous: '
+                err_msg = ('Requested module name is ambiguous: '
                            'found {appearances_count} appearances '
                            'of module named "{module_name}" '
                            'in modules definitions within '
