@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 import copy
 import logging
 import operator
@@ -74,8 +74,8 @@ def run(path: str, sep: str) -> None:
     sorted_modules_names_by_modules_paths = (
         sort_modules_names_by_modules_paths(modules_names_by_modules_paths))
 
-    for module_path in sorted_modules_names_by_modules_paths.keys():
-        sys.stdout.write(module_path + sep)
+    result = sep.join(sorted_modules_names_by_modules_paths.keys())
+    sys.stdout.write(result)
 
 
 def get_modules_names_by_modules_paths(
