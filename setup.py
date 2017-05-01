@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='run-fortran',
-      version='0.0.7',
+      version='0.1.0',
       scripts=['run-fortran.py'],
       description='Script for generating list of files paths '
                   'in hierarchical order '

@@ -19,7 +19,7 @@ from typing import (Callable,
 
 import click
 
-__version__ = '0.0.7'
+__version__ = '0.1.0'
 
 logger = logging.getLogger(__name__)
 
