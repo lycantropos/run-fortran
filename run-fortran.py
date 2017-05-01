@@ -5,8 +5,7 @@ import operator
 import os
 import re
 import sys
-from collections import (Counter,
-                         OrderedDict,
+from collections import (OrderedDict,
                          namedtuple)
 from functools import (partial,
                        reduce)
@@ -31,7 +30,7 @@ MODULE_USE_RE = re.compile(
     re.IGNORECASE)
 
 MODULE_DEFINITION_RE = re.compile(
-    r'(?<=\bmodule\s)(?P<module>\s*\w+)',
+    r'(?<=\bmodule\s)(?!\s*procedure)(\s*\w+)',
     re.IGNORECASE)
 
 LITERAL_CONSTANTS_RE = re.compile('|'.join([
@@ -97,27 +96,24 @@ def get_modules_names_by_modules_paths(
 def sort_modules_names_by_modules_paths(
         modules_names_by_modules_paths: Dict[str, ModulesNames]
 ) -> OrderedDict:
-    used_modules_names_lists = map(
-        list,
-        (modules_names.used
-         for modules_names in modules_names_by_modules_paths.values()))
-    used_modules_names_list = sum(used_modules_names_lists, [])
-    priorities = Counter(used_modules_names_list)
-
-    def used_modules_names_by_modules_paths_key(
-            modules_names_by_module_path: Tuple[str, ModulesNames]) -> int:
-        module_path, modules_names = modules_names_by_module_path
-        try:
-            return max(priorities[module_name]
-                       for module_name in modules_names.defined)
-        except ValueError:
-            return 0
-
-    sorted_used_modules_names_by_modules_paths = OrderedDict(sorted(
-        modules_names_by_modules_paths.items(),
-        key=used_modules_names_by_modules_paths_key,
-        reverse=True))
-    return sorted_used_modules_names_by_modules_paths
+    sorted_items_list = list()
+    for module_path, modules_names in modules_names_by_modules_paths.items():
+        index_by_defined = min(
+            (index
+             for index, (_, other_modules_names) in enumerate(sorted_items_list)
+             if any(defined_module_name in other_modules_names.used
+                    for defined_module_name in modules_names.defined)),
+            default=0)
+        index_by_used = max(
+            (index
+             for index, (_, other_modules_names) in enumerate(sorted_items_list,
+                                                              start=1)
+             if any(used_module_name in other_modules_names.defined
+                    for used_module_name in modules_names.used)),
+            default=0)
+        index = max(index_by_defined, index_by_used)
+        sorted_items_list.insert(index, (module_path, modules_names))
+    return OrderedDict(sorted_items_list)
 
 
 def update_chained_modules_names(
