@@ -12,3 +12,5 @@ services:
       - run
       - -p
       - /run-fortran/test_project
+      - -o
+      - result

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import copy
+import json
 import logging
 import operator
 import os
@@ -9,15 +10,18 @@ from collections import (OrderedDict,
                          namedtuple)
 from functools import (partial,
                        reduce)
-from typing import (Callable,
+from typing import (Optional,
+                    Callable,
                     Iterable,
                     Iterator,
                     Dict,
                     Set,
                     Tuple,
-                    List)
+                    List, IO)
 
 import click
+
+OUTPUT_FILE_EXTENSION = '.json'
 
 __version__ = '0.1.0'
 
@@ -54,7 +58,14 @@ def main() -> None:
 @click.option('--sep', '-s',
               default=' ',
               help='Separator between resulted modules paths.')
-def run(path: str, sep: str) -> None:
+@click.option('--output-file-name', '-o',
+              default=None,
+              type=str,
+              help='File name to save modules relations to '
+                   '(".json" extension will be added).')
+def run(path: str,
+        sep: str,
+        output_file_name: Optional[str]) -> None:
     """
     Orders modules paths by inclusion.
     """
@@ -70,11 +81,36 @@ def run(path: str, sep: str) -> None:
 
     update_chained_modules_names(modules_names_by_modules_paths)
 
-    sorted_modules_names_by_modules_paths = (
-        sort_modules_names_by_modules_paths(modules_names_by_modules_paths))
+    sorted_modules_names_by_modules_paths = OrderedDict(
+        sort_modules_names_by_modules_paths(modules_names_by_modules_paths.items()))
+
+    if output_file_name:
+        output_file_name += OUTPUT_FILE_EXTENSION
+        with open(output_file_name, mode='w') as output_file:
+            export(modules_names_by_modules_paths=
+                   sorted_modules_names_by_modules_paths,
+                   stream=output_file)
 
     result = sep.join(sorted_modules_names_by_modules_paths.keys())
     sys.stdout.write(result)
+
+
+def export(*,
+           modules_names_by_modules_paths: OrderedDict,
+           stream: IO[str]) -> None:
+    normalized_modules_names_by_modules_paths = OrderedDict(
+        normalize(modules_names_by_modules_paths))
+    json.dump(obj=normalized_modules_names_by_modules_paths,
+              fp=stream,
+              indent=True)
+
+
+def normalize(modules_names_by_modules_paths: Dict[str, ModulesNames]
+              ) -> Iterable[Tuple[str, OrderedDict]]:
+    for module_path, modules_names in modules_names_by_modules_paths.items():
+        modules_names = OrderedDict(defined=list(modules_names.defined),
+                                    used=list(modules_names.used))
+        yield module_path, modules_names
 
 
 def get_modules_names_by_modules_paths(
@@ -94,26 +130,33 @@ def get_modules_names_by_modules_paths(
 
 
 def sort_modules_names_by_modules_paths(
-        modules_names_by_modules_paths: Dict[str, ModulesNames]
-) -> OrderedDict:
-    sorted_items_list = list()
-    for module_path, modules_names in modules_names_by_modules_paths.items():
+        modules_names_by_modules_paths: Iterable[Tuple[str, ModulesNames]]
+) -> List[Tuple[str, ModulesNames]]:
+    res = list()
+    for module_path, modules_names in modules_names_by_modules_paths:
         index_by_defined = min(
             (index
-             for index, (_, other_modules_names) in enumerate(sorted_items_list)
+             for index, (_, other_modules_names) in enumerate(
+                res,
+                # insertion should be before module file
+                # in which one of current module's defined modules is used
+                start=0)
              if any(defined_module_name in other_modules_names.used
                     for defined_module_name in modules_names.defined)),
             default=0)
         index_by_used = max(
             (index
-             for index, (_, other_modules_names) in enumerate(sorted_items_list,
-                                                              start=1)
+             for index, (_, other_modules_names) in enumerate(
+                res,
+                # insertion should be after module file
+                # in which one of current module's used modules is defined
+                start=1)
              if any(used_module_name in other_modules_names.defined
                     for used_module_name in modules_names.used)),
             default=0)
         index = max(index_by_defined, index_by_used)
-        sorted_items_list.insert(index, (module_path, modules_names))
-    return OrderedDict(sorted_items_list)
+        res.insert(index, (module_path, modules_names))
+    return res
 
 
 def update_chained_modules_names(
@@ -150,20 +193,21 @@ def update_chained_modules_names(
         return res
 
     for (module_path,
-         used_modules_names) in modules_names_by_modules_paths_copy.items():
-        unprocessed_modules_names = copy.deepcopy(used_modules_names.used)
+         modules_names) in modules_names_by_modules_paths_copy.items():
+        unprocessed_modules_names = copy.deepcopy(modules_names.used)
         try:
             while True:
                 used_module_name = unprocessed_modules_names.pop()
                 extension = modules_names_by_modules_paths[
                     get_module_path_by_module_name(used_module_name)]
                 unprocessed_modules_names |= extension.used
-                used_modules_names = (
+                modules_names = (
                     modules_names_by_modules_paths[module_path].used
                     | extension.used
                     | extension.defined)
-                modules_names_by_modules_paths[module_path]._replace(
-                    used=used_modules_names)
+                modules_names_by_modules_paths[module_path] = (
+                    modules_names_by_modules_paths[module_path]._replace(
+                        used=modules_names))
         except KeyError:
             continue
 

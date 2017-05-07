@@ -31,3 +31,6 @@ result.xml
 
 # IntelliJ IDEA
 .idea/
+
+# output files
+*.json
