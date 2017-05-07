@@ -2,7 +2,7 @@
 ! data from population synthesis code and calculates average 
 ! velocities, standart deviation and for observational data - 
 ! characteristics of bolometric magnitudes bins 
-program velocities
+program main
 
     use observational, only: treatObservData
     use synthetic, only: treatSynthData 
@@ -11,17 +11,25 @@ program velocities
     implicit none
     logical :: obsDataIsUsed, &
                syntDataIsUsed, &
-               limogesCriterionFlag
+               limogesCriterionFlag, &
+               splittingNonDAFromDAFlag
 
-    call readArguments(obsDataIsUsed, syntDataIsUsed, limogesCriterionFlag)
+    call readArguments(obsDataIsUsed, &
+                       syntDataIsUsed, &
+                       limogesCriterionFlag, &
+                       splittingNonDAFromDAFlag)
 
     if (obsDataIsUsed) then
-        call treatObservData(limogesCriterionFlag)
+        call treatObservData(limogesCriterionFlag, &
+                             splittingNonDAFromDAFlag)
     else if (syntDataIsUsed) then
         call treatSynthData(limogesCriterionFlag)
+    else if (splittingNonDAFromDAFlag) then
+        call treatObservData(limogesCriterionFlag, &
+                             splittingNonDAFromDAFlag)
     else
         print*, "Critical error: check 'subroutine readArguments'"
     end if
 
 stop
-end program
+end program main

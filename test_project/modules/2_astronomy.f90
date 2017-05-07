@@ -1,35 +1,33 @@
 module astronomy
-
-    use, intrinsic :: iso_fortran_env
+    use, intrinsic :: iso_fortran_env, dp=>real64
     use math, only: PI, &
                     multiplyMatrixByVector
     implicit none
 
-    private :: RA_GPOLE, &
-               DEC_GPOLE, &
-               AUX_ANGLE, &
-               fillRotationMatrix
-        ! Right ascension of Galactic pole
-        real*8, parameter :: RA_GPOLE = 192.859508d0 * PI / 180.d0 
-        ! Declination of Galactic pole
-        real*8, parameter :: DEC_GPOLE = 27.128336d0 * PI /180.d0 
-        ! Auxiliary angle
-        real*8, parameter :: AUX_ANGLE = 122.932d0 * PI / 180.d0 
+    private 
     
     public :: CTK, &
               TRAN_MATR, &
               convertGalacticToXYZ, &
               convertEquatorToGalact, &
               convertHoursToRad, &
-              convertDegreesToRad
-        ! Astronomical unit in km/s
-        real*8, parameter :: CTK = 4.74047d0
-        ! Transformation matrix from equatorial to galactic coordinates
-        real*8, parameter, dimension(3, 3) :: TRAN_MATR &
-            = reshape( (/-0.054875d0,-0.873437d0,-0.483835d0,&       
-                          0.494109d0,-0.444829d0, 0.746982d0,&       
-                         -0.867666d0,-0.198076d0, 0.455983d0/),&     
-                         shape(TRAN_MATR), order = (/2,1/))
+              convertDegreesToRad, &
+              convertEquatorMotionToUVW
+              
+    ! Astronomical unit in km/s
+    real*8, parameter :: CTK = 4.74047d0
+    ! Transformation matrix from equatorial to galactic coordinates
+    real*8, parameter, dimension(3, 3) :: TRAN_MATR &
+        = reshape( (/-0.054875d0,-0.873437d0,-0.483835d0,&       
+                      0.494109d0,-0.444829d0, 0.746982d0,&       
+                     -0.867666d0,-0.198076d0, 0.455983d0/),&     
+                     shape(TRAN_MATR), order = (/2,1/))
+    ! Right ascension of Galactic pole
+    real*8, parameter :: RA_GPOLE = 192.859508d0 * PI / 180.d0 
+    ! Declination of Galactic pole
+    real*8, parameter :: DEC_GPOLE = 27.128336d0 * PI /180.d0 
+    ! Auxiliary angle
+    real*8, parameter :: AUX_ANGLE = 122.932d0 * PI / 180.d0 
 
 contains
     
@@ -42,7 +40,8 @@ contains
         coordinate(3) = r * dsin(b)
     end function
 
-    function convertHoursToRad(angleInHours) result(angleInRadians)
+
+    elemental function convertHoursToRad(angleInHours) result(angleInRadians)
         character(len = 11), intent(in) :: angleInHours
         real*8 angleInRadians
         real*8 hours,minutes,seconds
@@ -52,9 +51,10 @@ contains
         read(angleInHours(7:11), *) seconds
         angleInRadians = (hours+(minutes+seconds/60.d0)/60.d0) * 15.d0 & 
                          * pi / 180.d0
-    end function
+    end function convertHoursToRad
 
-    function convertDegreesToRad(angleInDegrees) result(angleInRadians)
+
+    elemental function convertDegreesToRad(angleInDegrees) result(angleInRadians)
         character(len = 11), intent(in) :: angleInDegrees
         real*8 angleInRadians
         real*8 degrees, arcmins, arcsecs
@@ -63,7 +63,8 @@ contains
         read(angleInDegrees(4:5), *) arcmins
         read(angleInDegrees(7:11), *) arcsecs
         angleInRadians = (degrees+(arcmins+arcsecs/60.d0)/60.d0) * pi / 180.d0
-    end function
+    end function convertDegreesToRad
+
 
     subroutine convertEquatorToGalact(ra,dec,l,b)
         real*8,intent(in) :: ra,dec
@@ -100,9 +101,9 @@ contains
                               motionInDEC, &
                               motionInRA
         real*8, dimension(3), intent(out) :: vel_hel
-        real(real64), parameter :: VEL_RAD = 0.d0
-        real(real64) :: motionInRAAster
-        real(real64), dimension(3) :: vel_motion = (/VEL_RAD, 0.d0, 0.d0/)
+        real(dp), parameter :: VEL_RAD = 0.d0
+        real(dp) :: motionInRAAster
+        real(dp), dimension(3) :: vel_motion = (/VEL_RAD, 0.d0, 0.d0/)
         real*8, dimension(3, 3) :: rotationMatrix
 
         ! Motion in right ascension with asterisk
