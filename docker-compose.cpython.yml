@@ -16,7 +16,6 @@ services:
       - ./test_project:/opt/run_fortran/test_project
     command:
       - run
-      - -p
-      - /opt/run_fortran/test_project
       - -o
       - result
+      - /opt/run_fortran/test_project
