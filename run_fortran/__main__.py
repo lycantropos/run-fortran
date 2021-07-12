@@ -10,13 +10,13 @@ from itertools import chain
 from typing import (Callable,
                     Container,
                     Dict,
-                    IO,
                     Iterable,
                     Iterator,
                     NamedTuple,
                     Optional,
                     Set,
-                    Tuple)
+                    Tuple,
+                    Union)
 
 import click
 
@@ -92,26 +92,25 @@ def run(path: str,
         with open(output_file_name,
                   mode='w',
                   encoding='utf-8') as output_file:
-            export(modules_by_paths=sorted_modules_by_paths,
-                   stream=output_file)
+            json.dump(modules_by_paths_to_json(sorted_modules_by_paths),
+                      output_file,
+                      indent=True)
     result = sep.join(sorted_modules_by_paths.keys())
     sys.stdout.write(result)
 
 
-def export(*,
-           modules_by_paths: OrderedDict,
-           stream: IO[str]) -> None:
-    json.dump(obj=OrderedDict(normalize(modules_by_paths)),
-              fp=stream,
-              indent=True)
+def modules_by_paths_to_json(modules_by_paths: Dict[str, Modules]
+                             ) -> Dict[str, Dict]:
+    return OrderedDict((module_path,
+                        OrderedDict(defined=[module_to_json(module)
+                                             for module in modules.defined],
+                                    used=[module_to_json(module)
+                                          for module in modules.used]))
+                       for module_path, modules in modules_by_paths.items())
 
 
-def normalize(modules_names_by_modules_paths: Dict[str, Modules]
-              ) -> Iterable[Tuple[str, OrderedDict]]:
-    for module_path, modules_names in modules_names_by_modules_paths.items():
-        modules_names = OrderedDict(defined=list(modules_names.defined),
-                                    used=list(modules_names.used))
-        yield module_path, modules_names
+def module_to_json(module: Module) -> Dict[str, Union[str, bool]]:
+    return {module.name: module.is_intrinsic}
 
 
 def sort_paths_by_modules(modules_with_paths: Iterable[Tuple[str, Modules]]
