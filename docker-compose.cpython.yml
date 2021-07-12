@@ -7,7 +7,7 @@ services:
       args:
         - IMAGE_NAME=${CPYTHON_IMAGE_NAME}
         - IMAGE_VERSION=${CPYTHON_IMAGE_VERSION}
-    image: lycantropos/run-fortran-cpython:1.0.0-alpha
+    image: lycantropos/run-fortran-cpython:1.0.0
     volumes:
       - ./README.md:/opt/run_fortran/README.md
       - ./requirements.txt:/opt/run_fortran/requirements.txt
