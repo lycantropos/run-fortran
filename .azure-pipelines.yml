@@ -115,11 +115,9 @@ steps:
     displayName: 'Install dependencies'
   - bash: python -m pip install --upgrade coverage codecov
     displayName: 'Install coverage dependencies'
-  - bash: python -m pip install -e .
-    displayName: 'Install project in editable mode'
   - bash: coverage run -m doctest README.md
     displayName: 'Run doctests'
-  - bash: coverage run --append run-fortran run -o result
+  - bash: coverage run --append -m run_fortran run -o result
     displayName: 'Run tests'
   - bash: coverage xml
     displayName: 'Collect coverage'
