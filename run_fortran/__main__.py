@@ -38,8 +38,8 @@ LITERAL_CONSTANTS_RE = re.compile('|'.join([
 ]))
 
 Module = NamedTuple('Module', [('name', str), ('is_intrinsic', bool)])
-Modules = NamedTuple('Modules',
-                     [('defined', Set[Module]), ('used', Set[Module])])
+Namespace = NamedTuple('Namespace',
+                       [('defined', Set[Module]), ('used', Set[Module])])
 
 
 @click.group()
@@ -73,28 +73,28 @@ def run(path: str,
     """
     defined_modules = dict(parse_defined_modules_by_paths(path))
     used_modules = dict(parse_used_modules_by_paths(path))
-    modules_by_paths = {
-        module_path: Modules(defined=defined_modules.get(module_path, set()),
-                             used=used_modules.get(module_path, set()))
+    namespaces_by_paths = {
+        module_path: Namespace(defined=defined_modules.get(module_path, set()),
+                               used=used_modules.get(module_path, set()))
         for module_path in defined_modules.keys() | used_modules.keys()}
     intrinsic_modules_names = set(
             map(str.strip, intrinsic_modules_names.lower().split(',')))
-    update_chained_modules(modules_by_paths, intrinsic_modules_names)
-    sorted_modules_by_paths = OrderedDict(sort_paths_by_modules(
-            modules_by_paths.items()))
+    unfold_namespaces(namespaces_by_paths, intrinsic_modules_names)
+    sorted_namespaces_by_paths = OrderedDict(sort_namespaces_with_paths(
+            namespaces_by_paths.items()))
     if output_file_name is not None:
         output_file_name += OUTPUT_FILE_EXTENSION
         with open(output_file_name,
                   mode='w',
                   encoding='utf-8') as output_file:
-            json.dump(modules_by_paths_to_json(sorted_modules_by_paths),
+            json.dump(modules_by_paths_to_json(sorted_namespaces_by_paths),
                       output_file,
                       indent=True)
-    result = sep.join(sorted_modules_by_paths.keys())
+    result = sep.join(sorted_namespaces_by_paths.keys())
     sys.stdout.write(result)
 
 
-def modules_by_paths_to_json(modules_by_paths: Dict[str, Modules]
+def modules_by_paths_to_json(modules_by_paths: Dict[str, Namespace]
                              ) -> Dict[str, Dict]:
     return OrderedDict((module_path,
                         OrderedDict(defined=[module_to_json(module)
@@ -108,67 +108,68 @@ def module_to_json(module: Module) -> Dict[str, Union[str, bool]]:
     return {module.name: module.is_intrinsic}
 
 
-def sort_paths_by_modules(modules_with_paths: Iterable[Tuple[str, Modules]]
-                          ) -> Iterable[Tuple[str, Modules]]:
+def sort_namespaces_with_paths(namespaces_with_paths
+                               : Iterable[Tuple[str, Namespace]]
+                               ) -> Iterable[Tuple[str, Namespace]]:
     result = []
-    for module_path, modules in modules_with_paths:
+    for path, namespace in namespaces_with_paths:
         index_by_defined = min(
                 (index
-                 for index, (_, other_modules) in enumerate(
+                 for index, (_, other_namespace) in enumerate(
                         result,
-                        # insertion should be before module file in which
-                        # one of current module's defined modules is used
+                        # insertion should be before namespace in which
+                        # one of current namespace's defined modules is used
                         start=0)
-                 if not other_modules.used.isdisjoint(modules.defined)),
+                 if not other_namespace.used.isdisjoint(namespace.defined)),
                 default=0)
         index_by_used = max(
                 (index
-                 for index, (_, other_modules) in enumerate(
+                 for index, (_, other_namespace) in enumerate(
                         result,
-                        # insertion should be after module file in which
-                        # one of current module's used modules is defined
+                        # insertion should be after namespace in which
+                        # one of current namespace's used modules is defined
                         start=1)
-                 if not other_modules.defined.isdisjoint(modules.used)),
+                 if not other_namespace.defined.isdisjoint(namespace.used)),
                 default=0)
-        index = max(index_by_defined, index_by_used)
-        result.insert(index, (module_path, modules))
+        result.insert(max(index_by_defined, index_by_used), (path, namespace))
     return result
 
 
-def update_chained_modules(modules_by_paths: Dict[str, Modules],
-                           intrinsic_modules_names: Container[str]) -> None:
-    modules_by_paths_copy = copy.deepcopy(modules_by_paths)
-    for module_path, modules in modules_by_paths_copy.items():
-        unprocessed_modules = copy.deepcopy(modules.used)
+def unfold_namespaces(namespaces_by_paths: Dict[str, Namespace],
+                      intrinsic_modules_names: Container[str]) -> None:
+    namespaces_by_paths_copy = copy.deepcopy(namespaces_by_paths)
+    for module_path, original_namespace in namespaces_by_paths_copy.items():
+        unprocessed_modules = copy.deepcopy(original_namespace.used)
         try:
             while True:
                 used_module = unprocessed_modules.pop()
                 if used_module.is_intrinsic:
                     continue
-                used_module_path = module_name_to_path(
+                used_module_path = to_module_path(
                         used_module,
-                        modules_by_paths=modules_by_paths_copy,
+                        namespaces_by_paths=namespaces_by_paths_copy,
                         intrinsic_modules_names=intrinsic_modules_names)
                 if used_module_path is None:
                     continue
-                extension = modules_by_paths[used_module_path]
-                unprocessed_modules |= extension.used
-                modules = (modules_by_paths[module_path].used | extension.used
-                           | extension.defined)
-                modules_by_paths[module_path] = (modules_by_paths[module_path]
-                                                 ._replace(used=modules))
+                used_module_namespace = namespaces_by_paths[used_module_path]
+                unprocessed_modules |= used_module_namespace.used
+                namespace = namespaces_by_paths[module_path]
+                unfolded_used_modules = (namespace.used
+                                         | used_module_namespace.defined
+                                         | used_module_namespace.used)
+                namespaces_by_paths[module_path] = (
+                    namespace._replace(used=unfolded_used_modules))
         except KeyError:
             continue
 
 
-def module_name_to_path(module: Module,
-                        *,
-                        modules_by_paths: Dict[str, Modules],
-                        intrinsic_modules_names: Container[str]
-                        ) -> Optional[str]:
+def to_module_path(module: Module,
+                   *,
+                   namespaces_by_paths: Dict[str, Namespace],
+                   intrinsic_modules_names: Container[str]) -> Optional[str]:
     candidates = [path
-                  for path, modules in modules_by_paths.items()
-                  if module in modules.defined]
+                  for path, namespace in namespaces_by_paths.items()
+                  if module in namespace.defined]
     try:
         result, = candidates
     except ValueError as error:
