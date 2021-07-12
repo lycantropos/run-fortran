@@ -10,7 +10,7 @@ services:
     image: lycantropos/run-fortran-cpython:0.1.1
     volumes:
       - ./README.md:/opt/run_fortran/README.md
-      - ./requirements.txt:/opt/run-fortran/requirements.txt
+      - ./requirements.txt:/opt/run_fortran/requirements.txt
       - ./run_fortran:/opt/run_fortran/run_fortran
       - ./setup.py:/opt/run_fortran/setup.py
       - ./test_project:/opt/run_fortran/test_project
