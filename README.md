@@ -1,7 +1,7 @@
 run-fortran
 ===========
 
-[![](https://dev.azure.com/lycantropos/run-fortran/_apis/build/status/lycantropos.run-fortran?branchName=master)](https://dev.azure.com/lycantropos/run-fortran/_build/latest?branchName=master "Azure Pipelines")
+[![](https://dev.azure.com/lycantropos/run-fortran/_apis/build/status/lycantropos.run-fortran?branchName=master)](https://dev.azure.com/lycantropos/run-fortran/_build/latest?definitionId=38&branchName=master "Azure Pipelines")
 [![](https://codecov.io/gh/lycantropos/run-fortran/branch/master/graph/badge.svg)](https://codecov.io/gh/lycantropos/run-fortran "Codecov")
 [![](https://img.shields.io/github/license/lycantropos/run-fortran.svg)](https://github.com/lycantropos/run-fortran/blob/master/LICENSE "License")
 [![](https://badge.fury.io/py/run-fortran.svg)](https://badge.fury.io/py/run-fortran "PyPI")
