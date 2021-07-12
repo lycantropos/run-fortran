@@ -15,7 +15,6 @@ services:
       - ./setup.py:/opt/run_fortran/setup.py
       - ./test_project:/opt/run_fortran/test_project
     command:
-      - run
       - -o
       - result
       - /opt/run_fortran/test_project
