@@ -5,7 +5,7 @@ FROM ${IMAGE_NAME}:${IMAGE_VERSION}
 
 RUN pip install --upgrade pip setuptools
 
-WORKDIR /opt/run-fortran
+WORKDIR /opt/run_fortran
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
