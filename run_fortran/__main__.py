@@ -7,7 +7,6 @@ from collections import OrderedDict
 from functools import partial
 from itertools import chain
 from typing import (Any,
-                    Callable,
                     Container,
                     Dict,
                     Iterable,
@@ -25,16 +24,15 @@ OUTPUT_FILE_EXTENSION = '.json'
 
 FORTRAN_FILES_EXTENSIONS = {'.f77', '.f90', '.f95', '.f03', '.f', '.for'}
 
-MODULE_USE_RE = re.compile(r'(?<=\buse)\s*'
-                           r'(?:,\s*'
-                           r'(?P<intrinsic>intrinsic|non_intrinsic)'
-                           r'\s*::)?'
-                           r'\s(?P<module>\w+)',
-                           re.IGNORECASE)
-MODULE_DEFINITION_RE = re.compile(r'(?<=\bmodule\s)(?!\s*procedure)(\s*\w+)',
+MODULE_USAGE_PATTERN = re.compile(r'(?<=\buse)\s*'
+                                  r'(?:,\s*'
+                                  r'(?P<intrinsic>intrinsic|non_intrinsic)'
+                                  r'\s*::)?'
+                                  r'\s(?P<module>\w+)',
                                   re.IGNORECASE)
-
-LITERAL_CONSTANTS_RE = re.compile('|'.join([
+MODULE_DEFINITION_PATTERN = re.compile(
+        r'(?<=\bmodule\s)(?!\s*procedure)(\s*\w+)', re.IGNORECASE)
+STRING_LITERAL_PATTERN = re.compile('|'.join([
     '\'[^\']*\'',  # for single quoted literal constants
     '\"[^\"]*\"'  # for double quoted literal constants
 ]))
@@ -44,16 +42,7 @@ Namespace = NamedTuple('Namespace',
                        [('defined', Set[Module]), ('used', Set[Module])])
 
 
-@click.group()
-def main() -> None:
-    pass
-
-
-@main.command()
-@click.option('--path', '-p',
-              default=os.getcwd(),
-              type=click.Path(),
-              help='Target project directory path.')
+@click.command()
 @click.option('--intrinsic-modules-names', '-i',
               default='IEEE_Arithmetic,IEEE_Features,IEEE_Exceptions,'
                       'ISO_C_Binding,ISO_Fortran_env',
@@ -66,21 +55,22 @@ def main() -> None:
               type=str,
               help='File name to save modules relations to '
                    '(".json" extension will be added).')
-def run(path: str,
-        intrinsic_modules_names: str,
-        sep: str,
-        output_file_name: Optional[str]) -> None:
-    """
-    Orders modules paths by inclusion.
-    """
-    defined_modules = dict(parse_defined_modules_by_paths(path))
-    used_modules = dict(parse_used_modules_by_paths(path))
-    namespaces_by_paths = {
-        module_path: Namespace(defined=defined_modules.get(module_path, set()),
-                               used=used_modules.get(module_path, set()))
-        for module_path in defined_modules.keys() | used_modules.keys()}
+@click.argument('paths',
+                nargs=-1,
+                type=click.Path(exists=True,
+                                file_okay=False,
+                                dir_okay=True))
+def main(intrinsic_modules_names: str,
+         sep: str,
+         output_file_name: Optional[str],
+         paths: List[str]) -> None:
+    """Orders paths by modules names."""
     intrinsic_modules_names = set(
             map(str.strip, intrinsic_modules_names.lower().split(',')))
+    fortran_files_paths = chain.from_iterable(map(to_fortran_files_paths,
+                                                  paths))
+    namespaces_by_paths = {path: path_to_namespace(path)
+                           for path in fortran_files_paths}
     unfold_namespaces(namespaces_by_paths, intrinsic_modules_names)
     sorted_namespaces_by_paths = OrderedDict(sort_namespaces_with_paths(
             namespaces_by_paths.items()))
@@ -94,6 +84,15 @@ def run(path: str,
                       indent=True)
     result = sep.join(sorted_namespaces_by_paths.keys())
     sys.stdout.write(result)
+
+
+def path_to_namespace(path: str) -> Namespace:
+    defined_modules, used_modules = set(), set()
+    for line in parse_normalized_lines(path):
+        defined_modules.update(to_defined_modules(line))
+        used_modules.update(to_used_modules(line))
+    return Namespace(defined=defined_modules,
+                     used=used_modules)
 
 
 def namespaces_by_paths_to_json(namespaces_by_paths: Dict[str, Namespace]
@@ -193,79 +192,48 @@ def to_module_path(module: Module,
     return result
 
 
-def parse_modules_by_paths(path: str,
-                           modules_parser: Callable[[str], Set[Module]]
-                           ) -> Iterable[Tuple[str, Set[Module]]]:
-    for module_path in to_fortran_modules_paths(path):
-        yield module_path, modules_parser(module_path)
-
-
-def to_fortran_modules_paths(directory_path: str) -> Iterator[str]:
+def to_fortran_files_paths(directory_path: str) -> Iterator[str]:
     directory_path = os.path.abspath(directory_path)
     for root_name, directories_names, files_names in os.walk(directory_path):
-        fortran_modules_names = filter(is_fortran_module, files_names)
+        fortran_files_names = filter(is_fortran_file, files_names)
         abs_path_getter = partial(os.path.join, root_name)
-        yield from map(abs_path_getter, fortran_modules_names)
+        yield from map(abs_path_getter, fortran_files_names)
 
 
-def is_fortran_module(file_name: str) -> bool:
+def is_fortran_file(file_name: str) -> bool:
     _, extension = os.path.splitext(file_name)
     return extension in FORTRAN_FILES_EXTENSIONS
 
 
-def parse_modules(module_path: str,
-                  modules_parser: Callable[[Iterable[str]], Set[Module]]
-                  ) -> Set[Module]:
-    return modules_parser(parse_normalized_statements(module_path))
+def parse_normalized_lines(file_path: str) -> Iterable[str]:
+    with open(file_path) as file:
+        yield from map(normalize_line, file)
 
 
-def parse_normalized_statements(module_path: str) -> Iterable[str]:
-    with open(module_path) as module_file:
-        yield from map(normalize_statement, module_file)
-
-
-def normalize_statement(statement: str) -> str:
-    stripped_statement = statement.strip(' ')
-    statement_without_literals = LITERAL_CONSTANTS_RE.sub('',
-                                                          stripped_statement)
+def normalize_line(line: str) -> str:
+    stripped_statement = line.strip(' ')
+    line_without_string_literals = STRING_LITERAL_PATTERN.sub(
+            '', stripped_statement)
     try:
-        statement_without_literals_and_comments, comment = (
-            statement_without_literals.split('!', maxsplit=1))
+        result, _ = line_without_string_literals.split('!',
+                                                       maxsplit=1)
     except ValueError:
         # no comments found
-        statement_without_literals_and_comments = statement_without_literals
-    return statement_without_literals_and_comments.lower()
+        result = line_without_string_literals
+    return result.lower()
 
 
-def statements_to_modules(statements: Iterable[str],
-                          modules_parser: Callable[[str], Iterable[Module]]
-                          ) -> Set[Module]:
-    return set(chain.from_iterable(map(modules_parser, statements)))
-
-
-def to_defined_modules(text: str) -> Iterable[Module]:
-    return [Module(name=name, is_intrinsic=False)
-            for name in MODULE_DEFINITION_RE.findall(text)]
+def to_defined_modules(line: str) -> Iterable[Module]:
+    return [Module(name=name,
+                   is_intrinsic=False)
+            for name in MODULE_DEFINITION_PATTERN.findall(line)]
 
 
 def to_used_modules(text: str) -> Iterable[Module]:
     return [Module(name=name,
                    is_intrinsic=intrinsic_marker == 'intrinsic')
-            for intrinsic_marker, name in MODULE_USE_RE.findall(text)]
+            for intrinsic_marker, name in MODULE_USAGE_PATTERN.findall(text)]
 
-
-statements_to_defined_modules = partial(statements_to_modules,
-                                        modules_parser=to_defined_modules)
-statements_to_used_modules = partial(statements_to_modules,
-                                     modules_parser=to_used_modules)
-parse_defined_modules = partial(parse_modules,
-                                modules_parser=statements_to_defined_modules)
-parse_used_modules = partial(parse_modules,
-                             modules_parser=statements_to_used_modules)
-parse_defined_modules_by_paths = partial(parse_modules_by_paths,
-                                         modules_parser=parse_defined_modules)
-parse_used_modules_by_paths = partial(parse_modules_by_paths,
-                                      modules_parser=parse_used_modules)
 
 if __name__ == '__main__':
     main()
