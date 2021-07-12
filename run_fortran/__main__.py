@@ -6,11 +6,13 @@ import sys
 from collections import OrderedDict
 from functools import partial
 from itertools import chain
-from typing import (Callable,
+from typing import (Any,
+                    Callable,
                     Container,
                     Dict,
                     Iterable,
                     Iterator,
+                    List,
                     NamedTuple,
                     Optional,
                     Set,
@@ -87,21 +89,24 @@ def run(path: str,
         with open(output_file_name,
                   mode='w',
                   encoding='utf-8') as output_file:
-            json.dump(modules_by_paths_to_json(sorted_namespaces_by_paths),
+            json.dump(namespaces_by_paths_to_json(sorted_namespaces_by_paths),
                       output_file,
                       indent=True)
     result = sep.join(sorted_namespaces_by_paths.keys())
     sys.stdout.write(result)
 
 
-def modules_by_paths_to_json(modules_by_paths: Dict[str, Namespace]
-                             ) -> Dict[str, Dict]:
-    return OrderedDict((module_path,
-                        OrderedDict(defined=[module_to_json(module)
-                                             for module in modules.defined],
-                                    used=[module_to_json(module)
-                                          for module in modules.used]))
-                       for module_path, modules in modules_by_paths.items())
+def namespaces_by_paths_to_json(namespaces_by_paths: Dict[str, Namespace]
+                                ) -> Dict[str, Any]:
+    return OrderedDict((path, namespace_to_json(namespace))
+                       for path, namespace in namespaces_by_paths.items())
+
+
+def namespace_to_json(namespace: Namespace) -> Dict[str, List[Any]]:
+    return OrderedDict(defined=[module_to_json(module)
+                                for module in namespace.defined],
+                       used=[module_to_json(module)
+                             for module in namespace.used])
 
 
 def module_to_json(module: Module) -> Dict[str, Union[str, bool]]:
