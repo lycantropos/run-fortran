@@ -40,15 +40,10 @@ python setup.py install
 Usage
 -----
 
-Run
+List available commands & options
 ```bash
-run-fortran run --path $PATH_TO_DIRECTORY --sep $SEPARATOR
+run-fortran --help
 ```
-where 
-- `$PATH_TO_DIRECTORY` is the path (relative or absolute) to target directory 
-(current working directory by default),
-- `$SEPARATOR` is the separator between resulted modules paths 
-(whitespace `' '` by default).
 
 Development
 -----------
