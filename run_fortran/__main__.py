@@ -70,25 +70,20 @@ def run(path: str,
             parse_defined_modules_names_by_modules_paths(path))
     used_modules_names_by_modules_paths = dict(
             parse_used_modules_names_by_modules_paths(path))
-
     modules_names_by_modules_paths = dict(
             get_modules_names_by_modules_paths(
                     defined_modules_names_by_modules_paths,
                     used_modules_names_by_modules_paths))
-
     update_chained_modules_names(modules_names_by_modules_paths)
-
     sorted_modules_names_by_modules_paths = OrderedDict(
             sort_modules_names_by_modules_paths(
                     modules_names_by_modules_paths.items()))
-
-    if output_file_name:
+    if output_file_name is not None:
         output_file_name += OUTPUT_FILE_EXTENSION
         with open(output_file_name, mode='w') as output_file:
             export(modules_names_by_modules_paths=
                    sorted_modules_names_by_modules_paths,
                    stream=output_file)
-
     result = sep.join(sorted_modules_names_by_modules_paths.keys())
     sys.stdout.write(result)
 
