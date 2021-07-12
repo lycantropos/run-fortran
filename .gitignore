@@ -1,36 +1,49 @@
-# logs
-*.log
-
+### Python
 # Byte-compiled / optimized / DLL files
-.cache/
-**/__pycache__/
+__pycache__/
 *.py[cod]
-
-# C extensions
-*.so
+*$py.class
 
 # Distribution / packaging
-bin/
+.Python
 build/
+_build/
 develop-eggs/
 dist/
+downloads/
 eggs/
+.eggs/
 lib/
 lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
-*.eggs
+*.egg
+MANIFEST
 
-# tests
-.hypothesis/
+# Unit test / coverage reports
+htmlcov/
+.tox/
 .coverage
-result.xml
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
 
-# IntelliJ IDEA
+# Environments
+venv*/
+
+# mypy
+.mypy_cache/
+
+### JetBrains
 .idea/
 
-# output files
-*.json
+### MacOS
+.DS_Store

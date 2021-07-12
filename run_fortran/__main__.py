@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import copy
 import json
 import logging
@@ -10,14 +9,15 @@ from collections import (OrderedDict,
                          namedtuple)
 from functools import (partial,
                        reduce)
-from typing import (Optional,
-                    Callable,
+from typing import (Callable,
+                    Dict,
+                    IO,
                     Iterable,
                     Iterator,
-                    Dict,
+                    List,
+                    Optional,
                     Set,
-                    Tuple,
-                    List, IO)
+                    Tuple)
 
 import click
 
@@ -29,13 +29,10 @@ logger = logging.getLogger(__name__)
 
 FORTRAN_FILES_EXTENSIONS = {'.f90', '.f95', '.f03', '.f', '.for'}
 
-MODULE_USE_RE = re.compile(
-    r'(?<=\buse\s)(?P<module>\s*\w+)',
-    re.IGNORECASE)
-
-MODULE_DEFINITION_RE = re.compile(
-    r'(?<=\bmodule\s)(?!\s*procedure)(\s*\w+)',
-    re.IGNORECASE)
+MODULE_USE_RE = re.compile(r'(?<=\buse\s)(?P<module>\s*\w+)',
+                           re.IGNORECASE)
+MODULE_DEFINITION_RE = re.compile(r'(?<=\bmodule\s)(?!\s*procedure)(\s*\w+)',
+                                  re.IGNORECASE)
 
 LITERAL_CONSTANTS_RE = re.compile('|'.join([
     '\'[^\']*\'',  # for single quoted literal constants
@@ -70,19 +67,20 @@ def run(path: str,
     Orders modules paths by inclusion.
     """
     defined_modules_names_by_modules_paths = dict(
-        parse_defined_modules_names_by_modules_paths(path))
+            parse_defined_modules_names_by_modules_paths(path))
     used_modules_names_by_modules_paths = dict(
-        parse_used_modules_names_by_modules_paths(path))
+            parse_used_modules_names_by_modules_paths(path))
 
     modules_names_by_modules_paths = dict(
-        get_modules_names_by_modules_paths(
-            defined_modules_names_by_modules_paths,
-            used_modules_names_by_modules_paths))
+            get_modules_names_by_modules_paths(
+                    defined_modules_names_by_modules_paths,
+                    used_modules_names_by_modules_paths))
 
     update_chained_modules_names(modules_names_by_modules_paths)
 
     sorted_modules_names_by_modules_paths = OrderedDict(
-        sort_modules_names_by_modules_paths(modules_names_by_modules_paths.items()))
+            sort_modules_names_by_modules_paths(
+                    modules_names_by_modules_paths.items()))
 
     if output_file_name:
         output_file_name += OUTPUT_FILE_EXTENSION
@@ -99,7 +97,7 @@ def export(*,
            modules_names_by_modules_paths: OrderedDict,
            stream: IO[str]) -> None:
     normalized_modules_names_by_modules_paths = OrderedDict(
-        normalize(modules_names_by_modules_paths))
+            normalize(modules_names_by_modules_paths))
     json.dump(obj=normalized_modules_names_by_modules_paths,
               fp=stream,
               indent=True)
@@ -118,14 +116,15 @@ def get_modules_names_by_modules_paths(
         used_modules_names_by_modules_paths: Dict[str, Set[str]]
 ) -> Iterable[Tuple[str, ModulesNames]]:
     modules_paths = reduce(operator.ior,
-                           map(set, [defined_modules_names_by_modules_paths.keys(),
-                                     used_modules_names_by_modules_paths.keys()]))
+                           map(set,
+                               [defined_modules_names_by_modules_paths.keys(),
+                                used_modules_names_by_modules_paths.keys()]))
     for module_path in modules_paths:
         modules_names = ModulesNames(
-            used=used_modules_names_by_modules_paths.get(module_path,
-                                                         set()),
-            defined=defined_modules_names_by_modules_paths.get(module_path,
-                                                               set()))
+                used=used_modules_names_by_modules_paths.get(module_path,
+                                                             set()),
+                defined=defined_modules_names_by_modules_paths.get(module_path,
+                                                                   set()))
         yield module_path, modules_names
 
 
@@ -135,25 +134,25 @@ def sort_modules_names_by_modules_paths(
     res = list()
     for module_path, modules_names in modules_names_by_modules_paths:
         index_by_defined = min(
-            (index
-             for index, (_, other_modules_names) in enumerate(
-                res,
-                # insertion should be before module file
-                # in which one of current module's defined modules is used
-                start=0)
-             if any(defined_module_name in other_modules_names.used
-                    for defined_module_name in modules_names.defined)),
-            default=0)
+                (index
+                 for index, (_, other_modules_names) in enumerate(
+                        res,
+                        # insertion should be before module file in which
+                        # one of current module's defined modules is used
+                        start=0)
+                 if any(defined_module_name in other_modules_names.used
+                        for defined_module_name in modules_names.defined)),
+                default=0)
         index_by_used = max(
-            (index
-             for index, (_, other_modules_names) in enumerate(
-                res,
-                # insertion should be after module file
-                # in which one of current module's used modules is defined
-                start=1)
-             if any(used_module_name in other_modules_names.defined
-                    for used_module_name in modules_names.used)),
-            default=0)
+                (index
+                 for index, (_, other_modules_names) in enumerate(
+                        res,
+                        # insertion should be after module file in which
+                        # one of current module's used modules is defined
+                        start=1)
+                 if any(used_module_name in other_modules_names.defined
+                        for used_module_name in modules_names.used)),
+                default=0)
         index = max(index_by_defined, index_by_used)
         res.insert(index, (module_path, modules_names))
     return res
@@ -162,7 +161,7 @@ def sort_modules_names_by_modules_paths(
 def update_chained_modules_names(
         modules_names_by_modules_paths: Dict[str, ModulesNames]) -> None:
     modules_names_by_modules_paths_copy = copy.deepcopy(
-        modules_names_by_modules_paths)
+            modules_names_by_modules_paths)
 
     def get_module_path_by_module_name(module_name: str) -> str:
         modules_paths = [
@@ -202,12 +201,12 @@ def update_chained_modules_names(
                     get_module_path_by_module_name(used_module_name)]
                 unprocessed_modules_names |= extension.used
                 modules_names = (
-                    modules_names_by_modules_paths[module_path].used
-                    | extension.used
-                    | extension.defined)
+                        modules_names_by_modules_paths[module_path].used
+                        | extension.used
+                        | extension.defined)
                 modules_names_by_modules_paths[module_path] = (
                     modules_names_by_modules_paths[module_path]._replace(
-                        used=modules_names))
+                            used=modules_names))
         except KeyError:
             continue
 
@@ -268,25 +267,25 @@ def parse_modules_names_from_statements(
 
 
 parse_defined_modules_names_from_statements = partial(
-    parse_modules_names_from_statements,
-    modules_names_getter=MODULE_DEFINITION_RE.findall)
+        parse_modules_names_from_statements,
+        modules_names_getter=MODULE_DEFINITION_RE.findall)
 parse_used_modules_names_from_statements = partial(
-    parse_modules_names_from_statements,
-    modules_names_getter=MODULE_USE_RE.findall)
+        parse_modules_names_from_statements,
+        modules_names_getter=MODULE_USE_RE.findall)
 
 parse_defined_modules_names = partial(
-    parse_modules_names,
-    modules_names_parser=parse_defined_modules_names_from_statements)
+        parse_modules_names,
+        modules_names_parser=parse_defined_modules_names_from_statements)
 parse_used_modules_names = partial(
-    parse_modules_names,
-    modules_names_parser=parse_used_modules_names_from_statements)
+        parse_modules_names,
+        modules_names_parser=parse_used_modules_names_from_statements)
 
 parse_defined_modules_names_by_modules_paths = partial(
-    parse_modules_names_by_modules_paths,
-    modules_names_parser=parse_defined_modules_names)
+        parse_modules_names_by_modules_paths,
+        modules_names_parser=parse_defined_modules_names)
 parse_used_modules_names_by_modules_paths = partial(
-    parse_modules_names_by_modules_paths,
-    modules_names_parser=parse_used_modules_names)
+        parse_modules_names_by_modules_paths,
+        modules_names_parser=parse_used_modules_names)
 
 if __name__ == '__main__':
     main()
