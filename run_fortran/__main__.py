@@ -27,7 +27,7 @@ __version__ = '0.1.1'
 
 logger = logging.getLogger(__name__)
 
-FORTRAN_FILES_EXTENSIONS = {'.f90', '.f95', '.f03', '.f', '.for'}
+FORTRAN_FILES_EXTENSIONS = {'.f77', '.f90', '.f95', '.f03', '.f', '.for'}
 
 MODULE_USE_RE = re.compile(r'(?<=\buse\s)(?P<module>\s*\w+)',
                            re.IGNORECASE)
