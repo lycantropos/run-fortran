@@ -1,6 +1,5 @@
 import copy
 import json
-import logging
 import os
 import re
 import sys
@@ -21,10 +20,6 @@ from typing import (Callable,
 import click
 
 OUTPUT_FILE_EXTENSION = '.json'
-
-__version__ = '0.1.1'
-
-logger = logging.getLogger(__name__)
 
 FORTRAN_FILES_EXTENSIONS = {'.f77', '.f90', '.f95', '.f03', '.f', '.for'}
 
@@ -49,7 +44,7 @@ Modules = NamedTuple('Modules',
 
 @click.group()
 def main() -> None:
-    logging.basicConfig(level=logging.DEBUG)
+    pass
 
 
 @main.command()
